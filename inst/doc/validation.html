@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Validation and benchmarks</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">table { width: 100%; table-layout: auto; border-collapse: collapse; margin: 1.2em 0 1.4em; font-size: 0.9em; line-height: 1.35; }
+table col { width: auto !important; }
+table th { text-align: left; background: #f3f6f4; border-top: 2px solid #2E6B3A; border-bottom: 1px solid #c9d3cc; padding: 0.45em 0.6em; font-weight: 600; vertical-align: bottom; }
+table td { padding: 0.4em 0.6em; border-bottom: 1px solid #e3e8e5; vertical-align: top; }
+table tr:nth-child(even) td { background: #fafbfa; }
+table th[align="right"], table td[align="right"], table th[style*="right"], table td[style*="right"] { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+table td:first-child { font-weight: 500; }
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Validation and benchmarks</h1>
+
+
+
+<!-- Generated from validation.Rmd.orig by tools/precompute-vignettes.R; edit the .orig file. -->
+<p>This vignette records how the package was checked: the routing solver
+against public benchmark instances and other solvers, and the estimators
+by simulation. The large runs were done once, outside the package build,
+with the scripts of the <code>fieldopt-core</code> repository; the small
+ones run here.</p>
+<div id="the-routing-solver" class="section level2">
+<h2>The routing solver</h2>
+<div class="figure">
+<img role="img" aria-label="Inside route_fieldwork: exact dynamic programme, hybrid genetic search, split, local search, penalties, bounds and certificate" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4NjAiIGhlaWdodD0iNTAwIiB2aWV3Qm94PSIwIDAgODYwIDUwMCIgZm9udC1mYW1pbHk9IkhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiPgo8ZGVmcz48bWFya2VyIGlkPSJhaCIgdmlld0JveD0iMCAwIDEwIDEwIiByZWZYPSI5IiByZWZZPSI1IiBtYXJrZXJXaWR0aD0iNSIgbWFya2VySGVpZ2h0PSI1IiBvcmllbnQ9ImF1dG8tc3RhcnQtcmV2ZXJzZSI+PHBhdGggZD0iTSAwIDAgTCAxMCA1IEwgMCAxMCB6IiBmaWxsPSIjNEE1NTY4Ii8+PC9tYXJrZXI+PC9kZWZzPgo8cmVjdCB3aWR0aD0iODYwIiBoZWlnaHQ9IjUwMCIgZmlsbD0iI0ZGRkZGRiIvPgo8dGV4dCB4PSI0MzAiIHk9IjI2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgZmlsbD0iIzFBMjAyQyI+SW5zaWRlIHJvdXRlX2ZpZWxkd29yaygpOiBob3cgYSByb3V0aW5nIHByb2JsZW0gaXMgc29sdmVkIGFuZCBwcm92ZW48L3RleHQ+CjxyZWN0IHg9IjIwIiB5PSI1MCIgd2lkdGg9IjI0MCIgaGVpZ2h0PSI2NCIgcng9IjgiIGZpbGw9IiNGREVFRUEiIHN0cm9rZT0iI0I0NDMyQiIgc3Ryb2tlLXdpZHRoPSIxLjYiLz4KPHRleHQgeD0iMTQwLjAiIHk9IjY4LjUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMUEyMDJDIj5VcCB0byAxMyB1bml0czogZXhhY3Q8L3RleHQ+Cjx0ZXh0IHg9IjE0MC4wIiB5PSI4OS41IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSIgZmlsbD0iIzJEMzc0OCI+ZHluYW1pYyBwcm9ncmFtbWUgb3ZlciBzdWJzZXRzLDwvdGV4dD4KPHRleHQgeD0iMTQwLjAiIHk9IjEwNC41IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSIgZmlsbD0iIzJEMzc0OCI+YW55IG51bWJlciBvZiBkZXBvdHM8L3RleHQ+CjxyZWN0IHg9IjYwMCIgeT0iNTAiIHdpZHRoPSIyNDAiIGhlaWdodD0iNjQiIHJ4PSI4IiBmaWxsPSIjRkRFRUVBIiBzdHJva2U9IiNCNDQzMkIiIHN0cm9rZS13aWR0aD0iMS42Ii8+Cjx0ZXh0IHg9IjcyMC4wIiB5PSI2OC4yIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzFBMjAyQyI+TW9yZSB1bml0czogZ2VuZXRpYyBzZWFyY2g8L3RleHQ+Cjx0ZXh0IHg9IjcyMC4wIiB5PSI4OS4yIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSIgZmlsbD0iIzJEMzc0OCI+cG9wdWxhdGlvbiBvZiBnaWFudCB0b3Vycywgb3JkZXI8L3RleHQ+Cjx0ZXh0IHg9IjcyMC4wIiB5PSIxMDQuMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTEiIGZpbGw9IiMyRDM3NDgiPmNyb3Nzb3ZlciwgcmVzdGFydHMsIHRpbWUgbGltaXQ8L3RleHQ+CjxyZWN0IHg9IjYwMCIgeT0iMTcwIiB3aWR0aD0iMjQwIiBoZWlnaHQ9IjY0IiByeD0iOCIgZmlsbD0iI0ZERUVFQSIgc3Ryb2tlPSIjQjQ0MzJCIiBzdHJva2Utd2lkdGg9IjEuNiIvPgo8dGV4dCB4PSI3MjAuMCIgeT0iMTg4LjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMUEyMDJDIj5TcGxpdCAoUHJpbnMpPC90ZXh0Pgo8dGV4dCB4PSI3MjAuMCIgeT0iMjA5LjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBmaWxsPSIjMkQzNzQ4Ij5vcHRpbWFsIGN1dCBpbnRvIHJvdXRlcywgZGVwb3QgcGVyPC90ZXh0Pgo8dGV4dCB4PSI3MjAuMCIgeT0iMjI0LjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBmaWxsPSIjMkQzNzQ4Ij5yb3V0ZSwgZmxlZXQgY2FwLCBwZW5hbGlzZWQgZXhjZXNzPC90ZXh0Pgo8cmVjdCB4PSI2MDAiIHk9IjI5MCIgd2lkdGg9IjI0MCIgaGVpZ2h0PSI2NCIgcng9IjgiIGZpbGw9IiNGREVFRUEiIHN0cm9rZT0iI0I0NDMyQiIgc3Ryb2tlLXdpZHRoPSIxLjYiLz4KPHRleHQgeD0iNzIwLjAiIHk9IjMwOS42IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzFBMjAyQyI+TG9jYWwgc2VhcmNoPC90ZXh0Pgo8dGV4dCB4PSI3MjAuMCIgeT0iMzI5LjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjMkQzNzQ4Ij4yLW9wdCwgT3Itb3B0LCByZWxvY2F0ZSwgc3dhcCwgU1dBUCosPC90ZXh0Pgo8dGV4dCB4PSI3MjAuMCIgeT0iMzQzLjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjMkQzNzQ4Ij4yLW9wdCosIGRlcG90IGNoYW5nZTsgTygxKSBwcmljaW5nPC90ZXh0Pgo8cmVjdCB4PSIzMDAiIHk9IjE3MCIgd2lkdGg9IjI2MCIgaGVpZ2h0PSI2NCIgcng9IjgiIGZpbGw9IiNGRkY4RTYiIHN0cm9rZT0iI0I3NzkxRiIgc3Ryb2tlLXdpZHRoPSIxLjYiLz4KPHRleHQgeD0iNDMwLjAiIHk9IjE4OC42IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzFBMjAyQyI+U29sdXRpb248L3RleHQ+Cjx0ZXh0IHg9IjQzMC4wIiB5PSIyMDkuNiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTEiIGZpbGw9IiMyRDM3NDgiPnJvdXRlcywgZHVyYXRpb25zLCBsb2Fkcyw8L3RleHQ+Cjx0ZXh0IHg9IjQzMC4wIiB5PSIyMjQuNiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTEiIGZpbGw9IiMyRDM3NDgiPmxvd2VyIGJvdW5kLCBvcHRpbWFsPC90ZXh0Pgo8cmVjdCB4PSIyMCIgeT0iMTcwIiB3aWR0aD0iMjQwIiBoZWlnaHQ9IjY0IiByeD0iOCIgZmlsbD0iI0ZERUVFQSIgc3Ryb2tlPSIjQjQ0MzJCIiBzdHJva2Utd2lkdGg9IjEuNiIvPgo8dGV4dCB4PSIxNDAuMCIgeT0iMTg5LjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMUEyMDJDIj5DZXJ0aWZpY2F0ZTwvdGV4dD4KPHRleHQgeD0iMTQwLjAiIHk9IjIwOS42IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMCIgZmlsbD0iIzJEMzc0OCI+dGFrZXMgYSBzaW5nbGUgdG91cjsgYnJhbmNoLWFuZC1ib3VuZDwvdGV4dD4KPHRleHQgeD0iMTQwLjAiIHk9IjIyMy42IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMCIgZmlsbD0iIzJEMzc0OCI+b24gMS10cmVlcyByZXR1cm5zIHRoZSBwcm9vZiBvciB0aGUgZ2FwPC90ZXh0Pgo8cmVjdCB4PSIyMCIgeT0iMjkwIiB3aWR0aD0iMjQwIiBoZWlnaHQ9IjY0IiByeD0iOCIgZmlsbD0iI0ZERUVFQSIgc3Ryb2tlPSIjQjQ0MzJCIiBzdHJva2Utd2lkdGg9IjEuNiIvPgo8dGV4dCB4PSIxNDAuMCIgeT0iMzA4LjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMUEyMDJDIj5Cb3VuZHM8L3RleHQ+Cjx0ZXh0IHg9IjE0MC4wIiB5PSIzMjkuNiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTEiIGZpbGw9IiMyRDM3NDgiPkhlbGQtS2FycCAxLXRyZWUgKHNpbmdsZSB0b3VyKSw8L3RleHQ+Cjx0ZXh0IHg9IjE0MC4wIiB5PSIzNDQuNiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTEiIGZpbGw9IiMyRDM3NDgiPmluL291dCBlZGdlcyBvdGhlcndpc2U8L3RleHQ+Cjxwb2x5bGluZSBwb2ludHM9IjI2MCw4MiA0MzAsODIgNDMwLDE3MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNEE1NTY4IiBzdHJva2Utd2lkdGg9IjEuOCIgbWFya2VyLWVuZD0idXJsKCNhaCkiLz4KPHJlY3QgeD0iMzIxLjAiIHk9IjU1LjAiIHdpZHRoPSI0OC4wIiBoZWlnaHQ9IjE3IiByeD0iMyIgZmlsbD0iI0ZGRkZGRiIgZmlsbC1vcGFjaXR5PSIwLjkyIi8+Cjx0ZXh0IHg9IjM0NS4wIiB5PSI2Ny4zIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSIgZmlsbD0iIzRBNTU2OCI+b3B0aW1hbDwvdGV4dD4KPHBvbHlsaW5lIHBvaW50cz0iNzIwLDExNCA3MjAsMTcwIiBmaWxsPSJub25lIiBzdHJva2U9IiM0QTU1NjgiIHN0cm9rZS13aWR0aD0iMS44IiBtYXJrZXItZW5kPSJ1cmwoI2FoKSIvPgo8cG9seWxpbmUgcG9pbnRzPSI3MjAsMjM0IDcyMCwyOTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzRBNTU2OCIgc3Ryb2tlLXdpZHRoPSIxLjgiIG1hcmtlci1lbmQ9InVybCgjYWgpIi8+Cjxwb2x5bGluZSBwb2ludHM9Ijg0MCwzMjIgODUyLDMyMiA4NTIsODIgODQwLDgyIiBmaWxsPSJub25lIiBzdHJva2U9IiM0QTU1NjgiIHN0cm9rZS13aWR0aD0iMS44IiBtYXJrZXItZW5kPSJ1cmwoI2FoKSIvPgo8cG9seWxpbmUgcG9pbnRzPSI2MDAsMzIyIDQzMCwzMjIgNDMwLDIzNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNEE1NTY4IiBzdHJva2Utd2lkdGg9IjEuOCIgbWFya2VyLWVuZD0idXJsKCNhaCkiLz4KPHJlY3QgeD0iNDczLjgiIHk9IjMzMi4wIiB3aWR0aD0iODIuNCIgaGVpZ2h0PSIxNyIgcng9IjMiIGZpbGw9IiNGRkZGRkYiIGZpbGwtb3BhY2l0eT0iMC45MiIvPgo8dGV4dCB4PSI1MTUuMCIgeT0iMzQ0LjQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBmaWxsPSIjNEE1NTY4Ij5iZXN0IGZlYXNpYmxlPC90ZXh0Pgo8cG9seWxpbmUgcG9pbnRzPSIzMDAsMTkyIDI2MCwxOTIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzRBNTU2OCIgc3Ryb2tlLXdpZHRoPSIxLjgiIG1hcmtlci1lbmQ9InVybCgjYWgpIi8+Cjxwb2x5bGluZSBwb2ludHM9IjI2MCwyMTIgMzAwLDIxMiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNEE1NTY4IiBzdHJva2Utd2lkdGg9IjEuOCIgbWFya2VyLWVuZD0idXJsKCNhaCkiLz4KPHBvbHlsaW5lIHBvaW50cz0iMTQwLDI5MCAxNDAsMjM0IiBmaWxsPSJub25lIiBzdHJva2U9IiM0QTU1NjgiIHN0cm9rZS13aWR0aD0iMS44IiBtYXJrZXItZW5kPSJ1cmwoI2FoKSIvPgo8dGV4dCB4PSI0MzAiIHk9IjM5MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTEiIGZpbGw9IiM3MTgwOTYiIGZvbnQtc3R5bGU9Iml0YWxpYyI+QWRhcHRpdmUgcGVuYWx0aWVzIG9uIGV4Y2VzcyBsb2FkLCBkdXJhdGlvbiwgc3RvcHMgYW5kIHJvdXRlcyBwZXIgZGVwb3QgbGV0IHRoZSBzZWFyY2ggY3Jvc3MgaW5mZWFzaWJsZSBzb2x1dGlvbnM8L3RleHQ+Cjx0ZXh0IHg9IjQzMCIgeT0iNDEwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSIgZmlsbD0iIzcxODA5NiIgZm9udC1zdHlsZT0iaXRhbGljIj4oZmVhc2libGUgYW5kIGluZmVhc2libGUgc3VicG9wdWxhdGlvbnMsIFZpZGFsIDIwMjIpOyB0aGUgbG9vcCBvbiB0aGUgcmlnaHQgcnVucyB1bnRpbCB0aGUgb2Zmc3ByaW5nIG9yIHRoZSB0aW1lIHJ1biBvdXQuPC90ZXh0Pgo8dGV4dCB4PSI0MzAiIHk9IjQ0NiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTEiIGZpbGw9IiM3MTgwOTYiIGZvbnQtc3R5bGU9Iml0YWxpYyI+VmFsaWRhdGlvbjogb3B0aW1hbCBvbiBUU1BMSUIgKDcgb2YgNyksIDI0IG9mIDI3IEF1Z2VyYXQgQ1ZSUCBvcHRpbWEsIGF0IG9yIGJlbG93IHRoZSBiZXN0IGtub3duIG9uIDExIHRvIDEzIG9mIHRoZSAyMyBDb3JkZWF1IE1EVlJQIGluc3RhbmNlczs8L3RleHQ+Cjx0ZXh0IHg9IjQzMCIgeT0iNDY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSIgZmlsbD0iIzcxODA5NiIgZm9udC1zdHlsZT0iaXRhbGljIj5ldmVyeSBtb3ZlIHByaWNlZCBpbiBjb25zdGFudCB0aW1lIGFuZCBjaGVja2VkIGFnYWluc3QgZnVsbCByZWNvbXB1dGF0aW9uOyBleGFjdCBEUCBhbmQgc3BsaXQgY2hlY2tlZCBhZ2FpbnN0IGJydXRlIGZvcmNlLjwvdGV4dD4KPC9zdmc+Cg==" alt="Inside route_fieldwork: exact dynamic programme, hybrid genetic search, split, local search, penalties, bounds and certificate" width="100%" />
+<p class="caption">
+Figure of the chunk unnamed-chunk-2
+</p>
+</div>
+<p>Instances with rounded Euclidean distances, as the libraries define
+them, one core of a laptop, one seed; “proven” means the certificate
+closed the gap within ten seconds:</p>
+<table>
+<colgroup>
+<col width="27%" />
+<col width="4%" />
+<col width="17%" />
+<col width="16%" />
+<col width="9%" />
+<col width="9%" />
+<col width="14%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Set</th>
+<th align="right">Instances</th>
+<th>Setting</th>
+<th align="right">Optimal</th>
+<th align="right">Mean gap</th>
+<th align="right">Largest gap</th>
+<th align="right">Time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>TSPLIB (51 to 101 nodes)</td>
+<td align="right">7</td>
+<td>2000 offspring</td>
+<td align="right">7 of 7 (6 proven)</td>
+<td align="right">0.00%</td>
+<td align="right">0.00%</td>
+<td align="right">0.7 to 4.7 s</td>
+</tr>
+<tr class="even">
+<td>Augerat A (CVRP, 31 to 79 customers)</td>
+<td align="right">27</td>
+<td>200 offspring (default)</td>
+<td align="right">14 of 27</td>
+<td align="right">0.20%</td>
+<td align="right">1.14%</td>
+<td align="right">under 0.4 s</td>
+</tr>
+<tr class="odd">
+<td>Augerat A</td>
+<td align="right">27</td>
+<td>2000 offspring</td>
+<td align="right">24 of 27</td>
+<td align="right">0.01%</td>
+<td align="right">0.15%</td>
+<td align="right">0.7 to 4 s</td>
+</tr>
+<tr class="even">
+<td>Cordeau MDVRP (50 to 360 customers, 2 to 6 depots)</td>
+<td align="right">23</td>
+<td>2000 offspring</td>
+<td align="right">11 of 23 at or below best known</td>
+<td align="right">0.29%</td>
+<td align="right">1.5%</td>
+<td align="right">1 to 26 s</td>
+</tr>
+<tr class="odd">
+<td>Cordeau MDVRP</td>
+<td align="right">23</td>
+<td>20 s each</td>
+<td align="right">13 of 23 at or below best known</td>
+<td align="right">0.26%</td>
+<td align="right">1.9%</td>
+<td align="right">20 s</td>
+</tr>
+</tbody>
+</table>
+<p>Other solvers on the same instances: PyVRP through the
+<code>vrpr</code> package reaches 18 of 27 Augerat optima in one second
+and 24 in five (mean gap 0.05%); HiGHS on the compact MTZ formulation
+solves the TSP up to 51 nodes (21 s) but stays 40 to 60 percent away
+from the optimum after three minutes on the smallest Augerat instances,
+which is why the package does not route with a general MIP solver.</p>
+<p>Stability: across eight seeds on four instances the gap moved by less
+than one percentage point (standard deviation below 0.3 points).</p>
+<p>Internal checks in the engine’s test suite: every local-search move
+is priced in constant time and was checked against a full recomputation
+on tens of thousands of accepted moves; the exact dynamic programme and
+the split of giant tours were checked against brute force on hundreds of
+random instances with one to three depots and asymmetric costs; the
+lower bounds never exceed the exact optimum; an independent review found
+and fixed four defects before release.</p>
+</div>
+<div id="the-estimators" class="section level2">
+<h2>The estimators</h2>
+<p>Small Monte Carlo checks, run here, of the unbiasedness of the main
+estimators.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">4</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>cells <span class="ot">&lt;-</span> <span class="fu">expand_grid</span>(<span class="at">x =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">15</span>, <span class="at">y =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">15</span>) <span class="sc">|&gt;</span> <span class="fu">mutate</span>(<span class="at">unit =</span> <span class="fu">paste0</span>(<span class="st">&quot;c&quot;</span>, <span class="fu">row_number</span>()))</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>areas <span class="ot">&lt;-</span> <span class="fu">expand_grid</span>(<span class="at">unit =</span> cells<span class="sc">$</span>unit, <span class="at">k =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>) <span class="sc">|&gt;</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>  <span class="fu">transmute</span>(unit, <span class="at">establishment =</span> <span class="fu">paste0</span>(unit, <span class="st">&quot;-&quot;</span>, k), <span class="at">area =</span> <span class="fl">0.3</span>, <span class="at">y =</span> <span class="fu">rlnorm</span>(<span class="fu">n</span>(), <span class="dv">2</span>, <span class="fl">0.5</span>))</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>deff <span class="ot">&lt;-</span> <span class="fu">point_design_effect</span>(</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>  cells, areas,</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>  <span class="at">n =</span> <span class="dv">25</span>, <span class="at">points_per_cell =</span> <span class="dv">6</span>, <span class="at">cell_size =</span> <span class="dv">1</span>, <span class="at">n_sim =</span> <span class="dv">60</span>, <span class="at">seed =</span> <span class="dv">2</span></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>)</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>deff <span class="sc">|&gt;</span> <span class="fu">select</span>(bias, variance, mean_variance_estimate, deff)</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="co">#&gt; # A tibble: 1 × 4</span></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a><span class="co">#&gt;     bias variance mean_variance_estimate   deff</span></span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="co">#&gt;    &lt;dbl&gt;    &lt;dbl&gt;                  &lt;dbl&gt;  &lt;dbl&gt;</span></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a><span class="co">#&gt; 1 56.127  158401.                167223. 1.4716</span></span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">7</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>cells <span class="ot">&lt;-</span> cells <span class="sc">|&gt;</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>    <span class="at">domain =</span> <span class="fu">if_else</span>(<span class="fu">runif</span>(<span class="fu">n</span>()) <span class="sc">&lt;</span> <span class="fl">0.2</span>, <span class="st">&quot;ab&quot;</span>, <span class="st">&quot;a&quot;</span>),</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>    <span class="at">yv =</span> <span class="fu">if_else</span>(domain <span class="sc">==</span> <span class="st">&quot;ab&quot;</span>, <span class="dv">80</span>, <span class="dv">10</span>) <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="fu">n</span>(), <span class="at">sd =</span> <span class="dv">3</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  )</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>overlap <span class="ot">&lt;-</span> cells <span class="sc">|&gt;</span> <span class="fu">filter</span>(domain <span class="sc">==</span> <span class="st">&quot;ab&quot;</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>lst <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  overlap <span class="sc">|&gt;</span> <span class="fu">transmute</span>(<span class="at">unit =</span> <span class="fu">paste0</span>(<span class="st">&quot;l&quot;</span>, <span class="fu">row_number</span>()), domain, yv),</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  <span class="fu">tibble</span>(<span class="at">unit =</span> <span class="fu">paste0</span>(<span class="st">&quot;b&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">12</span>), <span class="at">domain =</span> <span class="st">&quot;b&quot;</span>, <span class="at">yv =</span> <span class="dv">120</span> <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">12</span>, <span class="at">sd =</span> <span class="dv">5</span>))</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">x =</span> <span class="fu">runif</span>(<span class="fu">n</span>()), <span class="at">y =</span> <span class="fu">runif</span>(<span class="fu">n</span>()))</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>truth <span class="ot">&lt;-</span> <span class="fu">sum</span>(cells<span class="sc">$</span>yv) <span class="sc">+</span> <span class="fu">sum</span>(lst<span class="sc">$</span>yv[lst<span class="sc">$</span>domain <span class="sc">==</span> <span class="st">&quot;b&quot;</span>])</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>est <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">40</span>, \(k) {</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>  sa <span class="ot">&lt;-</span> cells <span class="sc">|&gt;</span> <span class="fu">select_units</span>(<span class="at">n =</span> <span class="dv">30</span>, <span class="at">seed =</span> k)</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>  sb <span class="ot">&lt;-</span> lst <span class="sc">|&gt;</span> <span class="fu">select_units</span>(<span class="at">n =</span> <span class="dv">15</span>, <span class="at">method =</span> <span class="st">&quot;srs&quot;</span>, <span class="at">seed =</span> k)</span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>  <span class="fu">tibble</span>(</span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>    <span class="at">hartley =</span> <span class="fu">dual_frame_estimator</span>(sa, sb, <span class="st">&quot;yv&quot;</span>, <span class="st">&quot;domain&quot;</span>)<span class="sc">$</span>total,</span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>    <span class="at">fb =</span> <span class="fu">dual_frame_estimator</span>(sa, sb, <span class="st">&quot;yv&quot;</span>, <span class="st">&quot;domain&quot;</span>, <span class="at">estimator =</span> <span class="st">&quot;fuller-burmeister&quot;</span>)<span class="sc">$</span>total</span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>  )</span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>}) <span class="sc">|&gt;</span> <span class="fu">list_rbind</span>()</span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>est <span class="sc">|&gt;</span></span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="fu">across</span>(<span class="fu">everything</span>(), mean)) <span class="sc">|&gt;</span></span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">truth =</span> truth, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a><span class="co">#&gt; # A tibble: 1 × 3</span></span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a><span class="co">#&gt;    truth hartley     fb</span></span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a><span class="co">#&gt;    &lt;dbl&gt;   &lt;dbl&gt;  &lt;dbl&gt;</span></span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a><span class="co">#&gt; 1 6182.1  6221.3 6247.1</span></span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a><span class="co"># relative bias in percent</span></span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a>est <span class="sc">|&gt;</span> <span class="fu">summarise</span>(<span class="fu">across</span>(<span class="fu">everything</span>(), \(e) <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> (<span class="fu">mean</span>(e) <span class="sc">-</span> truth) <span class="sc">/</span> truth, <span class="dv">2</span>)))</span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a><span class="co">#&gt; # A tibble: 1 × 2</span></span>
+<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a><span class="co">#&gt;   hartley    fb</span></span>
+<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a><span class="co">#&gt;     &lt;dbl&gt; &lt;dbl&gt;</span></span>
+<span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a><span class="co">#&gt; 1    0.63  1.05</span></span></code></pre></div>
+<p>Further checks live in the test suite: the Hartley allocation against
+a grid search over the mixing weight, Cochran’s two-stage optimum
+against enumeration, the multivariate allocation against an integer
+grid, the cube method’s balance against simple random sampling, and the
+<code>survey</code> designs produced by <code>as_svydesign()</code>
+against the package’s own totals and replicate variances.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

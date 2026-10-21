@@ -1,0 +1,48 @@
+test_that("the frontier reports cost and variance per sample size", {
+  set.seed(4)
+  fr <- data.frame(unit = c("depot", paste0("s", 1:30)), x = c(5, runif(30, 0, 10)), y = c(5, runif(30, 0, 10)))
+  fr$crop <- c(NA, 20 + 3 * fr$x[-1] + rnorm(30))
+  cm <- field_cost_model(per_travel = 2, per_unit = 30, per_interview = 10, interviews_per_unit = 4)
+  f <- cost_variance_frontier(fr, "depot", cm, n_grid = c(6, 12), y = "crop", method = "euclidean", n_rep = 2, iterations = 10)
+  expect_s3_class(f, "fieldopt_frontier")
+  expect_equal(f$n, c(6, 12))
+  expect_true(all(diff(f$cost_mean) > 0))
+  expect_true(all(diff(f$variance_mean) < 0))
+  expect_equal(f$n_rep, c(2, 2))
+  expect_s3_class(autoplot(f), "ggplot")
+  g <- cost_variance_frontier(fr, "depot", cm, n_grid = 6, method = "euclidean", n_rep = 2, iterations = 10)
+  expect_false("variance_mean" %in% names(g))
+  expect_s3_class(autoplot(g), "ggplot")
+  expect_error(cost_variance_frontier(fr, "nope", cm, 6, method = "euclidean"), "not found")
+  expect_error(cost_variance_frontier(fr[, -1], "depot", cm, 6, method = "euclidean"), "unit")
+})
+
+test_that("core version is the version of fieldopt-core in Cargo.toml", {
+  expect_match(core_version(), "^[0-9]+\\.[0-9]+\\.[0-9]+$")
+  toml <- system.file("rust/Cargo.toml", package = "fieldopt")
+  if (toml == "") toml <- testthat::test_path("..", "..", "src", "rust", "Cargo.toml")
+  skip_if_not(file.exists(toml))
+  dep <- grep("^fieldopt-core", readLines(toml), value = TRUE)
+  expect_equal(core_version(), gsub("[^0-9.]", "", sub("^fieldopt-core\\s*=\\s*", "", dep)))
+})
+
+test_that("the frontier accepts strata, selection methods and allocations", {
+  set.seed(6)
+  cells <- expand.grid(x = 1:12, y = 1:12)
+  cells$unit <- paste0("c", seq_len(nrow(cells)))
+  cells$h <- ifelse(cells$x <= 6, "west", "east")
+  cells$crop <- 3 + cells$x + rnorm(nrow(cells))
+  fr <- rbind(data.frame(unit = "depot", x = 6.5, y = 6.5, h = NA, crop = NA), cells)
+  cm <- field_cost_model(per_travel = 1, per_unit = 10, per_interview = 5)
+  f <- cost_variance_frontier(fr, "depot", cm,
+    n_grid = list(c(west = 4, east = 8), c(west = 8, east = 12)), y = "crop",
+    strata = "h", selection = "systematic", replicates = 2, method = "euclidean", n_rep = 2, iterations = 10
+  )
+  expect_equal(f$n, c(12, 20))
+  expect_equal(f$allocation[[2]], c(east = 12, west = 8)[c("east", "west")])
+  expect_equal(f$cost_per_unit, f$cost_mean / f$n)
+  expect_equal(attr(f, "selection"), "systematic")
+  g <- cost_variance_frontier(fr, "depot", cm, n_grid = 10, strata = "h", selection = "srs", method = "euclidean", n_rep = 2, iterations = 10)
+  expect_equal(sum(g$allocation[[1]]), 10)
+  expect_error(cost_variance_frontier(fr, "depot", cm, n_grid = numeric(0), method = "euclidean"), "at least one")
+})

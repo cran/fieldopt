@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Frames, strata and cost-aware allocation</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">table { width: 100%; table-layout: auto; border-collapse: collapse; margin: 1.2em 0 1.4em; font-size: 0.9em; line-height: 1.35; }
+table col { width: auto !important; }
+table th { text-align: left; background: #f3f6f4; border-top: 2px solid #2E6B3A; border-bottom: 1px solid #c9d3cc; padding: 0.45em 0.6em; font-weight: 600; vertical-align: bottom; }
+table td { padding: 0.4em 0.6em; border-bottom: 1px solid #e3e8e5; vertical-align: top; }
+table tr:nth-child(even) td { background: #fafbfa; }
+table th[align="right"], table td[align="right"], table th[style*="right"], table td[style*="right"] { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+table td:first-child { font-weight: 500; }
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Frames, strata and cost-aware
+allocation</h1>
+
+
+
+<!-- Generated from frames-and-allocation.Rmd.orig by tools/precompute-vignettes.R; edit the .orig file. -->
+<p>Agricultural and establishment surveys often combine a list frame
+(known farms, cheap to reach by phone or on a planned visit) and an area
+frame (segments of territory, expensive to reach, complete in coverage).
+Even within one frame, strata differ in the cost of a unit.
+<code>frame_allocation()</code> is Cochran’s (1977, Section 5.5)
+allocation with a cost per unit in each stratum, in its two forms.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(fieldopt)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(dplyr, <span class="at">warn.conflicts =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>strata <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>  <span class="at">stratum =</span> <span class="fu">c</span>(<span class="st">&quot;list: large&quot;</span>, <span class="st">&quot;list: small&quot;</span>, <span class="st">&quot;area&quot;</span>),</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>  <span class="at">size =</span> <span class="fu">c</span>(<span class="dv">300</span>, <span class="dv">2500</span>, <span class="dv">900</span>),</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>  <span class="at">sd =</span> <span class="fu">c</span>(<span class="dv">80</span>, <span class="dv">12</span>, <span class="dv">35</span>),</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>  <span class="at">cost =</span> <span class="fu">c</span>(<span class="dv">60</span>, <span class="dv">35</span>, <span class="dv">190</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>)</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>strata</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="co">#&gt; # A tibble: 3 × 4</span></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a><span class="co">#&gt;   stratum      size    sd  cost</span></span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;       &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;</span></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a><span class="co">#&gt; 1 list: large   300    80    60</span></span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a><span class="co">#&gt; 2 list: small  2500    12    35</span></span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a><span class="co">#&gt; 3 area          900    35   190</span></span></code></pre></div>
+<div id="minimum-cost-for-a-target-variance" class="section level2">
+<h2>Minimum cost for a target variance</h2>
+<p>Fix the precision wanted for the estimated total and find the
+cheapest allocation that reaches it. The optimum has <code>n_h</code>
+proportional to <code>N_h S_h / sqrt(c_h)</code>, rounded up and kept
+between 2 and <code>N_h</code>.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="fu">frame_allocation</span>(strata, <span class="at">target_variance =</span> <span class="fl">2.5e7</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>a</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; ── Allocation ──────────────────────────────────────────────────────────────────</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt; Minimum cost for target variance 2.5e+07: cost 22640, variance 24720000.</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt; # A tibble: 3 × 5</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt;   stratum      size    sd  cost     n</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;       &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;int&gt;</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt; 1 list: large   300    80    60    88</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt; 2 list: small  2500    12    35   143</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt; 3 area          900    35   190    65</span></span></code></pre></div>
+</div>
+<div id="minimum-variance-for-a-budget" class="section level2">
+<h2>Minimum variance for a budget</h2>
+<p>Fix the budget instead and find the allocation with the smallest
+variance within it. Rounding is repaired so that the cost never exceeds
+the budget.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="fu">frame_allocation</span>(strata, <span class="at">budget =</span> <span class="dv">30000</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>b</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; ── Allocation ──────────────────────────────────────────────────────────────────</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt; Minimum variance for budget 30000: cost 29980, variance 17830000.</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt; # A tibble: 3 × 5</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt;   stratum      size    sd  cost     n</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;       &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;int&gt;</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; 1 list: large   300    80    60   116</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; 2 list: small  2500    12    35   191</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; 3 area          900    35   190    86</span></span></code></pre></div>
+</div>
+<div id="where-the-field-cost-comes-in" class="section level2">
+<h2>Where the field cost comes in</h2>
+<p>The <code>cost</code> column above is a planning value per unit. For
+the area frame it should include the travel, and that is what the
+routing part of the package estimates: run
+<code>cost_variance_frontier()</code> on the area frame with a cost
+model, read the mean cost per unit at the sample size under
+consideration, and use it as the stratum cost. The allocation then
+reflects how expensive the segments really are to visit, and the loop
+can be iterated once or twice until the stratum costs and sample sizes
+agree.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>f <span class="ot">&lt;-</span> <span class="fu">cost_variance_frontier</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  area_frame,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">depot =</span> <span class="st">&quot;depot&quot;</span>, <span class="at">cost_model =</span> model,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">n_grid =</span> <span class="fu">c</span>(<span class="dv">40</span>, <span class="dv">60</span>, <span class="dv">80</span>, <span class="dv">100</span>), <span class="at">y =</span> <span class="st">&quot;crop&quot;</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>)</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>area_cost <span class="ot">&lt;-</span> f <span class="sc">|&gt;</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="fu">slice_min</span>(<span class="fu">abs</span>(n <span class="sc">-</span> a<span class="sc">$</span>n[<span class="dv">3</span>]), <span class="at">n =</span> <span class="dv">1</span>) <span class="sc">|&gt;</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="fu">pull</span>(cost_per_unit)</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>strata <span class="sc">|&gt;</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">cost =</span> <span class="fu">if_else</span>(stratum <span class="sc">==</span> <span class="st">&quot;area&quot;</span>, area_cost, cost)) <span class="sc">|&gt;</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  <span class="fu">frame_allocation</span>(<span class="at">target_variance =</span> <span class="fl">2.5e7</span>)</span></code></pre></div>
+<p>Overlap between the frames (farms present in both) is not modelled
+here; the allocation treats the frames as strata of a single design.</p>
+</div>
+<div id="several-study-variables" class="section level2">
+<h2>Several study variables</h2>
+<p>A survey rarely has one target: crop area and cattle, or production
+and the number of holdings, each with its own precision.
+<code>multivariate_allocation()</code> finds the cheapest allocation
+that meets every target at once (Bethel 1989); the multipliers say which
+targets bind, and <code>glance()</code> shows the variance attained for
+each.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>multi <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">stratum =</span> <span class="fu">c</span>(<span class="st">&quot;list&quot;</span>, <span class="st">&quot;area-high&quot;</span>, <span class="st">&quot;area-low&quot;</span>),</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">size =</span> <span class="fu">c</span>(<span class="dv">2000</span>, <span class="dv">300</span>, <span class="dv">500</span>), <span class="at">cost =</span> <span class="fu">c</span>(<span class="dv">40</span>, <span class="dv">200</span>, <span class="dv">160</span>),</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">sd_crop =</span> <span class="fu">c</span>(<span class="dv">12</span>, <span class="dv">35</span>, <span class="dv">18</span>), <span class="at">sd_cattle =</span> <span class="fu">c</span>(<span class="dv">30</span>, <span class="dv">10</span>, <span class="dv">25</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>)</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>ma <span class="ot">&lt;-</span> <span class="fu">multivariate_allocation</span>(</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  multi,</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  <span class="at">sd =</span> <span class="fu">c</span>(<span class="st">&quot;sd_crop&quot;</span>, <span class="st">&quot;sd_cattle&quot;</span>),</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  <span class="at">target_cv =</span> <span class="fu">c</span>(<span class="fl">0.04</span>, <span class="fl">0.06</span>), <span class="at">totals =</span> <span class="fu">c</span>(<span class="dv">120000</span>, <span class="dv">90000</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>)</span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>ma</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; ── Multivariate allocation ─────────────────────────────────────────────────────</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; Minimum cost 11200 for 2 targets.</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; sd_crop: target 23040000, attained 22600000 (binding).</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt; sd_cattle: target 29160000, attained 28670000 (binding).</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt; # A tibble: 3 × 4</span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt;   stratum    size  cost     n</span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;int&gt;</span></span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt; 1 list       2000    40   169</span></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">#&gt; 2 area-high   300   200     7</span></span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">#&gt; 3 area-low    500   160    19</span></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="fu">glance</span>(ma)</span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt; # A tibble: 2 × 7</span></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="co">#&gt;   variable    target  attained multiplier     n  cost bounded</span></span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;        &lt;dbl&gt;     &lt;dbl&gt;      &lt;dbl&gt; &lt;int&gt; &lt;dbl&gt; &lt;lgl&gt;  </span></span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a><span class="co">#&gt; 1 sd_crop   23040000 22603942.  0.0000616   195 11200 FALSE  </span></span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a><span class="co">#&gt; 2 sd_cattle 29160000 28668674.  0.000305    195 11200 FALSE</span></span></code></pre></div>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<p>Bethel, J. (1989). Sample allocation in multivariate surveys.
+<em>Survey Methodology</em>, 15, 47–57.</p>
+<p>Cochran, W. G. (1977). <em>Sampling Techniques</em>, third edition.
+Wiley.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

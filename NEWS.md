@@ -1,0 +1,143 @@
+# fieldopt 0.1.0
+
+* `cost_variance_frontier()` and everything built on it (`routed_unit_cost()`,
+  `routed_cost_curve()`, `two_stage_design()`, `dual_frame_design()`) route
+  the simulated samples without the optimality certificate of single tours,
+  which only adds proof time: about 14 times faster on single-tour problems.
+* The local-mean variance estimator (`design_variance()` for `"lpm"`, `"cube"` and
+  single-replicate systematic samples) averages over each sampled unit and
+  its `neighbours = 3` nearest sampled units, as `BalancedSampling::vsb()`
+  (engine `fieldopt-core` 0.10.0). The previous neighbourhood grew until the
+  inclusion probabilities summed to one and overestimated the variance by 60
+  to 160 percent for spatially smooth variables (experiment E3).
+  `design_variance()` also reports `df`, the degrees of freedom of the
+  variance (`r - 1` with `r` replicates): use the t quantile for intervals.
+* `routed_cost_curve()` measures the routed cost `G(n) = c0 + a n + b sqrt(n)`
+  of a design: Hansen, Hurwitz and Madow's travel constant estimated by
+  routing the frame; `predict()` gives the total, average and marginal cost.
+* `two_stage_design()` and `dual_frame_design()` fit the routed cost curve
+  `G(n) = c0 + a n + b sqrt(n)` from samples routed at a few sizes and
+  allocate with the marginal cost `G'(n)`, which is what Cochran's and
+  Hartley's rules need when the cost is not linear; under a budget the sample
+  sizes come from the fitted curve, so the design spends the budget at its
+  real routed cost. The previous loop used the average cost and took 3 to 12
+  percent too few primary units. Results gain `c1_average` (or
+  `cost_a_average`), `cost_curve` and `cost_coef`.
+* `schedule_fieldwork()` solves the assignment of units to bases and the
+  routes jointly, as one multi-depot problem with a route limit per base and
+  the `per_route` cost in the objective (engine `fieldopt-core` 0.8.1);
+  `route_fieldwork()` charges `per_route` in its objective too. On the 23
+  Cordeau multi-depot instances the solver reaches or beats the best known
+  solution on 11 and stays within 1.6% on the rest, in 1 to 26 seconds.
+* Pipe-friendly inputs: `travel_matrix()` takes a sample (its sampled units
+  only) with `bases` and a `speed` that turns distances into minutes;
+  `route_fieldwork()` and `schedule_fieldwork()` take the sample as `units`;
+  `sampled()` returns the selected rows, so a plan reads
+  `frame |> select_units(n) |> travel_matrix(bases = towns, speed = 60) |>
+  schedule_fieldwork(units = s, ...)`.
+* Connectors: `as_svydesign()` hands a sample to the `survey` package (a
+  replicate-weight design for replicated systematic samples, Brewer's or the
+  simple-random-sampling approximation otherwise) for calibration, domains and
+  nonresponse adjustment; `frame_overlap()` matches the establishments of a
+  list frame to the cells of the area frame (coordinates, polygons or a table
+  of linked pairs) and marks the overlap domain; `read_areaframe()` reads the
+  cells exported by the area-frame service (Parquet with WKB geometries) or any
+  spatial file.
+* `select_units(method = "lpm")` and `spatial_balance()` use a grid spatial
+  index (engine `fieldopt-core` 0.9.1): a frame of a million cells is sampled
+  in under a second instead of hours. `schedule_fieldwork(region = )` solves
+  one region at a time and combines the calendars, the way a national survey
+  is scheduled state by state.
+* `schedule_calendar()` redistributes the routes of a schedule over teams and
+  days as an integer programme solved with the `highs` package (in Suggests):
+  team availability by day, routes fixed to a team or a day, precedences, and
+  a daily limit that lets short routes share a team-day; it minimises the last
+  working day.
+* `route_fieldwork(certify = )` runs a branch-and-bound on Held-Karp 1-trees
+  that proves single tours optimal (engine `fieldopt-core` 0.9.0): most tours
+  of up to a hundred units are certified within a few seconds, and `optimal`
+  is no longer limited to instances of 13 units.
+* The routing solver was rebuilt (engine `fieldopt-core` 0.5.0): instances of
+  up to 13 units are solved exactly; larger ones by a hybrid genetic search
+  with the optimal split of giant tours and a granular local search with
+  inter-route moves (relocate, swap, 2-opt*); the Held-Karp bound replaces
+  the two-edge bound for single tours and `optimal` reports proven optimality;
+  `route_fieldwork()` gains `demand`, `capacity`, `time_limit` and
+  `engine = "vrpr"` (the PyVRP solver through the `vrpr` package, also in
+  `schedule_fieldwork()`, where it optimises the assignment to bases jointly
+  with the routes). The built-in solver has feasible and infeasible
+  subpopulations with adaptive penalties, SWAP* and intra-route swaps, moves
+  priced from route totals in constant time, population restarts and a time
+  limit (engine 0.7.0): on TSPLIB it is optimal and on Augerat set A it
+  reaches 24 of 27 optima (mean gap 0.01%, largest 0.15%) in about two
+  seconds.
+
+* New tools (engine `fieldopt-core` 0.4.0): `route_fieldwork()` takes a
+  `service_time` per unit that counts towards `max_length` and reports route
+  `durations`; `field_cost_model()` gains `per_route` (the cost of a
+  team-day); `schedule_fieldwork()` assigns units to bases, routes each base
+  and builds the calendar of teams and days; `dual_frame_estimator()`
+  combines the area and list samples (Hartley with fixed, screening or
+  estimated `theta`; Fuller-Burmeister) with design-based variances;
+  `select_units(method = "cube", balance = )` draws balanced samples by the
+  cube method and `spatial_balance()` is the Voronoi measure of Stevens and
+  Olsen; `ratio_estimator()` uses a known auxiliary total;
+  `multivariate_allocation()` is the Bethel allocation for several study
+  variables; `as_frame()` and `as_sf()` move between `sf` layers and frames.
+
+* Review round (engine `fieldopt-core` 0.3.0): the routing local search
+  prices every move in the direction travelled, so asymmetric road matrices
+  (one-way streets, durations by direction) no longer loop, and the lower
+  bound is valid for asymmetric matrices and for several routes;
+  `two_stage_allocation()` tries every whole `m`, accepts a fractional
+  `m_secondary` and meets its target in small populations;
+  `dual_frame_allocation()` reads `sd` as the standard deviation with
+  divisor `N - 1` and refuses `theta` outside `[0, 1]` and budgets below two
+  units per frame; `select_units()` refuses `size` with `"srs"` (the
+  probabilities were mislabelled), duplicate unit names, `n` below the
+  number of strata, strata with too few positive sizes and invalid seeds, and
+  leaves the user's random-number generator untouched; `point_estimator()`
+  refuses missing `y`; `two_stage_design()` and `dual_frame_design()` report
+  `converged = FALSE` when the rounds run out; `cost_variance_frontier()`
+  takes the coordinate columns from a supplied `matrix`; `core_version()`
+  reports the engine crate. New: `autoplot()` for samples, `print()` for
+  points, `tidy()`/`glance()` for routes, `glance()` for frontiers.
+* The R wrappers are shipped in `R/extendr-wrappers.R` and no longer
+  regenerated at install time (`cargo run --bin document`), which failed on
+  the CRAN Windows toolchain.
+
+* Area-frame and dual-frame design: `select_units()` gains strata, a
+  spatially ordered systematic method with interpenetrating replicates and
+  simple random sampling; `select_points()`, `expected_hits()` and
+  `point_estimator()` implement point sampling inside segments with the
+  multiplicity estimator; `segment_estimator()` gives the closed, open and
+  weighted segment estimators; `dual_frame_allocation()` is Hartley's
+  allocation with an optimised or fixed mixing weight (screening design);
+  `two_stage_allocation()` is Cochran's two-stage allocation with the cost
+  function `c1 n + c2 n m`. `design_variance()` chooses the variance
+  estimator that matches the design (local-mean, replicates or SRS).
+  Engine: `fieldopt-core` 0.2.3.
+* `cost_variance_frontier()` accepts `strata`, `selection` and `replicates`,
+  a list of per-stratum allocations in `n_grid`, and reports `cost_per_unit`.
+* `travel_matrix()` gains a `detour` factor for straight-line distances and
+  `method = "osrm"`, road durations or distances from an OSRM server through
+  the `osrm` package, requested in blocks; the frontier and the routed designs
+  accept the same method.
+* `routed_unit_cost()`, `two_stage_design()` and `dual_frame_design()`
+  iterate the allocation with the cost per area unit measured by routing;
+  `point_design_effect()` simulates the area design and returns the bias,
+  variance and design effect of point sampling; `select_points()` gains a
+  systematic layout; `tidy()` and `glance()` for the three allocations.
+* Variances are computed within strata and summed (`"stratified srs"`,
+  `"stratified local-mean"`); route plots of geographic matrices put longitude
+  on the x axis.
+
+* First version: travel matrices from coordinates or a road network
+  (`travel_matrix()`), a field cost model (`field_cost_model()`), GRASP routing
+  of the field work for one or several teams (`route_fieldwork()`), spatially
+  balanced selection of units with the local pivotal method (`select_units()`),
+  Horvitz-Thompson estimation with the local-mean variance estimator
+  (`design_variance()`), cost-aware allocation across strata or frames
+  (`frame_allocation()`) and the cost-variance frontier of a design by
+  simulation (`cost_variance_frontier()`). The engine is the Rust crate
+  `fieldopt-core`.
